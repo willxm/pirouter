@@ -1,9 +1,5 @@
 package pirouter
 
-import (
-	"strings"
-)
-
 type (
 	// Tree records node
 	Tree struct {
@@ -48,8 +44,8 @@ func (t *Tree) Add(pattern string, handle interface{}) {
 	var currentNode = t.root
 
 	if pattern != currentNode.key {
-		pattern = trimPathPrefix(pattern)
-		res := splitPattern(pattern)
+		pattern = TrimPathPrefix(pattern)
+		res := SplitPattern(pattern)
 		for _, key := range res {
 			node, ok := currentNode.children[key]
 			if !ok {
@@ -78,9 +74,9 @@ func (t *Tree) Find(pattern string) (nodes []*Node) {
 		return
 	}
 
-	pattern = trimPathPrefix(pattern)
+	pattern = TrimPathPrefix(pattern)
 
-	res := splitPattern(pattern)
+	res := SplitPattern(pattern)
 
 	for _, key := range res {
 		child, ok := node.children[key]
@@ -115,12 +111,4 @@ func (t *Tree) Find(pattern string) (nodes []*Node) {
 	}
 
 	return
-}
-
-func trimPathPrefix(pattern string) string {
-	return strings.TrimPrefix(pattern, "/")
-}
-
-func splitPattern(pattern string) []string {
-	return strings.Split(pattern, "/")
 }

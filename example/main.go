@@ -1,12 +1,13 @@
-# Pirouter
-Pirouter(π-router) a toy-level http router
+package main
 
-## Usage
-```shell
-go get github.com/willxm/pirouter
-```
+import (
+	"fmt"
+	"net/http"
+	"time"
 
-```golang
+	"github.com/willxm/pirouter"
+)
+
 func main() {
 	r := pirouter.NewRouter()
 	r.Register("POST", "/user/login", greet)
@@ -26,9 +27,3 @@ func hix(w http.ResponseWriter, r *http.Request) {
 func hiy(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hi y! %s", time.Now())
 }
-
-```
-
-## TODO
-- error handler
-- middleware
