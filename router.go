@@ -1,9 +1,23 @@
 package pirouter
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 )
+
+var httpMethod = map[string]bool{
+	"GET":     true,
+	"HEAD":    true,
+	"POST":    true,
+	"PUT":     true,
+	"DELETE":  true,
+	"CONNECT": true,
+	"OPTIONS": true,
+	"TRACE":   true,
+	"PATCH":   true,
+}
 
 type HandlerFunc func(w http.ResponseWriter, r *http.Request)
 
@@ -17,8 +31,10 @@ func NewRouter() Router {
 }
 
 func (r *Router) Register(method string, path string, hander HandlerFunc) {
-	//TODO: check method
-	// see https://tools.ietf.org/html/rfc7231#section-4
+	method = strings.ToUpper(method)
+	if v, ok := httpMethod[method]; !ok || !v {
+		panic(fmt.Sprintf("method:%s not support\n", method))
+	}
 	if _, ok := r.roots[method]; !ok {
 		r.roots[method] = NewTree()
 	}
