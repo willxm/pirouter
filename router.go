@@ -52,7 +52,11 @@ func (r *Router) handle(c *Context) {
 	ns := r.getRoute(c.Method, c.Path)
 	if ns != nil {
 		for k, v := range ns {
-			if TrimPathPrefix(c.Path) == v.path {
+			var path = c.Path
+			if v.path != "/" {
+				path = TrimPathPrefix(path)
+			}
+			if path == v.path {
 				v.handle.(HandlerFunc)(c.Writer, c.Req)
 			} else {
 				if k+1 == len(ns) {
