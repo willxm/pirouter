@@ -18,7 +18,8 @@ type (
 		// children records Node's children node
 		children map[string]*Node
 		// isPattern flag
-		isPattern bool
+		isPattern   bool
+		middlewares []Middleware
 	}
 )
 
@@ -63,14 +64,11 @@ func (t *Tree) Add(pattern string, handle interface{}) {
 }
 
 // Find returns nodes that the request match the route pattern
-func (t *Tree) Find(pattern string) (nodes []*Node) {
-	var (
-		node  = t.root
-		queue []*Node
-	)
+func (t *Tree) Find(pattern string) (nodes *Node, handlers []Middleware) {
+	node := t.root
 
 	if pattern == node.path {
-		nodes = append(nodes, node)
+		nodes = node
 		return
 	}
 
@@ -80,35 +78,14 @@ func (t *Tree) Find(pattern string) (nodes []*Node) {
 
 	for _, key := range res {
 		child, ok := node.children[key]
-
 		if !ok {
-			return
+			return nil, nil
 		}
-
+		handlers = append(handlers, child.middlewares...)
 		if pattern == child.path {
-			nodes = append(nodes, child)
-			return
+			return child, handlers
 		}
-
 		node = child
 	}
-
-	queue = append(queue, node)
-
-	for len(queue) > 0 {
-		var queueTemp []*Node
-		for _, n := range queue {
-			if n.isPattern {
-				nodes = append(nodes, n)
-			}
-
-			for _, childNode := range n.children {
-				queueTemp = append(queueTemp, childNode)
-			}
-		}
-
-		queue = queueTemp
-	}
-
 	return
 }
