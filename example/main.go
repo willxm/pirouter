@@ -10,10 +10,13 @@ import (
 
 func main() {
 	r := pirouter.NewRouter()
-	r.Register("POST", "/user/login", greet)
+	r.Register("GET", "/user", greet)
 	r.Register("GET", "/user/info", hix)
 	r.Register("GET", "/user/photo", hiy)
-	r.Run(":8080")
+	go func() {
+		r.Run(":9091")
+	}()
+	<-make(chan int)
 }
 
 func greet(w http.ResponseWriter, r *http.Request) {

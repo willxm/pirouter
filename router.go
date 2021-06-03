@@ -1,6 +1,7 @@
 package pirouter
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,12 +18,14 @@ var httpMethod = map[string]bool{
 	"OPTIONS": true,
 	"TRACE":   true,
 	"PATCH":   true,
+	"ANY":     true,
 }
 
 type HandlerFunc func(w http.ResponseWriter, r *http.Request)
 
 type Router struct {
-	roots map[string]*Tree
+	middlewares []Middleware
+	roots       map[string]*Tree
 }
 
 func NewRouter() Router {
@@ -30,7 +33,23 @@ func NewRouter() Router {
 	return Router{roots: rm}
 }
 
-func (r *Router) Register(method string, path string, hander HandlerFunc) {
+func (r *Router) Use(method string, path string, middlewares ...Middleware) error {
+	method = strings.ToUpper(method)
+	if v, ok := httpMethod[method]; !ok || !v {
+		panic(fmt.Sprintf("method:%s not support\n", method))
+	}
+	if _, ok := r.roots[method]; !ok {
+		return errors.New("invalid path:" + path)
+	}
+	node, _ := r.roots[method].Find(path)
+	if node == nil {
+		return errors.New("invalid path:" + path)
+	}
+	node.middlewares = append(node.middlewares, middlewares...)
+	return nil
+}
+
+func (r *Router) Register(method string, path string, handler HandlerFunc) {
 	method = strings.ToUpper(method)
 	if v, ok := httpMethod[method]; !ok || !v {
 		panic(fmt.Sprintf("method:%s not support\n", method))
@@ -38,33 +57,33 @@ func (r *Router) Register(method string, path string, hander HandlerFunc) {
 	if _, ok := r.roots[method]; !ok {
 		r.roots[method] = NewTree()
 	}
-	r.roots[method].Add(path, hander)
+	r.roots[method].Add(path, handler)
 }
 
-func (r *Router) getRoute(method string, path string) []*Node {
+func (r *Router) getRoute(method string, path string) (*Node, []Middleware) {
 	if _, ok := r.roots[method]; !ok {
-		return nil
+		return nil, nil
 	}
 	return r.roots[method].Find(path)
 }
 
 func (r *Router) handle(c *Context) {
-	ns := r.getRoute(c.Method, c.Path)
-	if ns != nil {
-		for k, v := range ns {
-			var path = c.Path
-			if v.path != "/" {
-				path = TrimPathPrefix(path)
-			}
-			if path == v.path {
-				v.handle.(HandlerFunc)(c.Writer, c.Req)
-			} else {
-				if k+1 == len(ns) {
-					c.NotFound()
-					return
-				}
+	node, middlewares := r.getRoute(c.Method, c.Path)
+	if node == nil {
+		c.NotFound()
+		return
+	}
+	var path = c.Path
+	if node.path != "/" {
+		path = TrimPathPrefix(path)
+	}
+	if path == node.path {
+		for _, m := range middlewares {
+			if err := m.HandleRequest(c); err != nil {
+				return
 			}
 		}
+		node.handle.(HandlerFunc)(c.Writer, c.Req)
 	} else {
 		c.NotFound()
 	}
