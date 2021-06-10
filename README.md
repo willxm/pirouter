@@ -30,5 +30,22 @@ func hiy(w http.ResponseWriter, r *http.Request) {
 ```
 
 ## TODO
-- error handler
-- middleware
+- [X] middleware
+- [X] more middleware control func
+- [ ] error handler
+- [ ] router group
+- [ ] param binding
+- [ ] test
+
+
+
+## Known issues
+
+1. can not match correctly in this way
+```golang
+r.Register("GET", "/:name/info", hix)
+r.Register("GET", "/user", hiy)
+```
+``
+GET '/user/info', will return 404
+``
