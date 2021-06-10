@@ -19,7 +19,7 @@ var httpMethod = map[string]bool{
 	"PATCH":   true,
 }
 
-type HandlerFunc func(w http.ResponseWriter, r *http.Request)
+type HandlerFunc func(c *Context)
 
 type Router struct {
 	roots map[string]*Tree
@@ -30,7 +30,7 @@ func NewRouter() Router {
 	return Router{roots: rm}
 }
 
-func (r *Router) Register(method string, path string, hander HandlerFunc) {
+func (r *Router) Register(method string, path string, handlers ...HandlerFunc) {
 	method = strings.ToUpper(method)
 	if v, ok := httpMethod[method]; !ok || !v {
 		panic(fmt.Sprintf("method:%s not support\n", method))
@@ -38,7 +38,7 @@ func (r *Router) Register(method string, path string, hander HandlerFunc) {
 	if _, ok := r.roots[method]; !ok {
 		r.roots[method] = NewTree()
 	}
-	r.roots[method].Add(path, hander)
+	r.roots[method].Add(path, handlers...)
 }
 
 func (r *Router) getRoute(method string, path string) []*Node {
@@ -50,21 +50,9 @@ func (r *Router) getRoute(method string, path string) []*Node {
 
 func (r *Router) handle(c *Context) {
 	ns := r.getRoute(c.Method, c.Path)
-	if ns != nil {
-		for k, v := range ns {
-			var path = c.Path
-			if v.path != "/" {
-				path = TrimPathPrefix(path)
-			}
-			if path == v.path {
-				v.handle.(HandlerFunc)(c.Writer, c.Req)
-			} else {
-				if k+1 == len(ns) {
-					c.NotFound()
-					return
-				}
-			}
-		}
+	if len(ns) > 0 {
+		c.handlers = ns[0].handle
+		c.Next()
 	} else {
 		c.NotFound()
 	}
@@ -72,6 +60,13 @@ func (r *Router) handle(c *Context) {
 
 // Run defines the method to start a http server
 func (r *Router) Run(addr string) (err error) {
+	//todo debug switch
+	{
+		for k, v := range r.roots {
+			fmt.Println(k)
+			v.String()
+		}
+	}
 	log.Printf("Listening on %s\n", addr)
 	return http.ListenAndServe(addr, r)
 }
